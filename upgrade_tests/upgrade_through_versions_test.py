@@ -342,6 +342,13 @@ class TestUpgrade(Tester):
 
             # upgrade through versions
             for version_meta in self.test_version_metas[1:]:
+                if version_meta.family > '3.11' and internode_ssl:
+                    seeds =[]
+                    for seed in cluster.seeds:
+                        seeds.append(seed.ip_addr + ':7001')
+                    logger.debug("Forcing seeds to 7001 for internode ssl")
+                    cluster.seeds = seeds
+
                 for num, node in enumerate(self.cluster.nodelist()):
                     # sleep (sigh) because driver needs extra time to keep up with topo and make quorum possible
                     # this is ok, because a real world upgrade would proceed much slower than this programmatic one
