@@ -26,3 +26,4 @@ thrift==0.10.0
 netifaces
 beautifulsoup4
 lxml
+wcwidth
