@@ -5,6 +5,7 @@ import logging
 from cassandra import ConsistencyLevel
 from cassandra.cluster import NoHostAvailable
 
+from distutils.version import LooseVersion
 from dtest import Tester, create_ks, create_cf
 from tools.data import putget
 from tools.misc import generate_ssl_stores
@@ -40,7 +41,8 @@ class TestNativeTransportSSL(Tester):
         except NoHostAvailable:
             pass
 
-        if cluster.version() >= '4.0':
+        # in 4.0 the netty upgrade changed the error message, but the next one changed it back
+        if cluster.version() == LooseVersion('4.0'):
             assert len(node1.grep_log("javax.net.ssl.SSLHandshakeException")) > 0, \
                     "Missing SSL handshake exception while connecting with non-SSL enabled client"
         else:
