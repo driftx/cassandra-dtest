@@ -546,6 +546,7 @@ class TestUpgrade(Tester):
                 c counter,
                 PRIMARY KEY (k1)
                 );""")
+        session.cluster.control_connection.wait_for_schema_agreement()
 
     def _create_schema(self):
         session = self.patient_cql_connection(self.node2, protocol_version=self.protocol_version)
@@ -563,6 +564,7 @@ class TestUpgrade(Tester):
                 c counter,
                 PRIMARY KEY (k1, k2)
                 );""")
+        session.cluster.control_connection.wait_for_schema_agreement()
 
     def _write_values(self, num=100):
         session = self.patient_cql_connection(self.node2, protocol_version=self.protocol_version)
