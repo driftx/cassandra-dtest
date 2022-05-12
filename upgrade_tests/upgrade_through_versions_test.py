@@ -385,7 +385,6 @@ class TestUpgrade(Tester):
                 self._create_schema()
         else:
             logger.debug("Skipping schema creation (should already be built)")
-        time.sleep(5)  # sigh...
 
         self._log_current_ver(self.test_version_metas[0])
 
