@@ -44,6 +44,7 @@ class TestStorageEngineUpgrade(Tester):
         else:
             cluster.set_install_dir(version=indev_2_1_x.version)
             self.install_nodetool_legacy_parsing()
+        self.install_nodetool_legacy_parsing()
         self.fixture_dtest_setup.reinitialize_cluster_for_different_version()
         cluster.populate(1).start()
 
@@ -64,10 +65,12 @@ class TestStorageEngineUpgrade(Tester):
         node1.stop(wait_other_notice=True)
 
         node1.set_install_dir(install_dir=self.fixture_dtest_setup.default_install_dir)
+        self.install_nodetool_legacy_parsing()
         node1.start(wait_for_binary_proto=True)
 
         if self.fixture_dtest_setup.bootstrap:
             cluster.set_install_dir(install_dir=self.fixture_dtest_setup.default_install_dir)
+            self.install_nodetool_legacy_parsing()
             # Add a new node, bootstrap=True ensures that it is not a seed
             node2 = new_node(cluster, bootstrap=True)
             node2.start(wait_for_binary_proto=True, jvm_args=self.fixture_dtest_setup.jvm_args)
