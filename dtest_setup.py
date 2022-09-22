@@ -86,7 +86,7 @@ class DTestSetup(object):
 
     def install_nodetool_legacy_parsing(self):
         """ Hack nodetool on old versions for legacy URL parsing, ala CASSANDRA-17581 """
-        if self.cluster.version() < LooseVersion('3.0'):
+        if self.cluster.version() < LooseVersion('3.11.13'):
             logger.debug("hacking nodetool for legacy parsing")
             nodetool = os.path.join(self.cluster.get_install_dir(), 'bin', 'nodetool')
             with open(nodetool, 'r+') as fd:
