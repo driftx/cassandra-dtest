@@ -522,7 +522,7 @@ class TestUpgrade(Tester):
 
         for node in nodes:
             node.set_install_dir(version=version_meta.version)
-            self.install_nodetool_legacy_parsing()
+            self.install_legacy_parsing(node)
             logger.debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
             if internode_ssl and (LooseVersion(version_meta.family) >= CASSANDRA_4_0):
                 node.set_configuration_options({'server_encryption_options': {'enabled': True, 'enable_legacy_ssl_storage_port': True}})

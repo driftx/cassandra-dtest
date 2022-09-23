@@ -84,16 +84,21 @@ class DTestSetup(object):
         self.create_cluster_func = None
         self.iterations = 0
 
+    def install_legacy_parsing(self, node):
+        """ Hack node's shell script for nodetool legacy URL parsing, ala CASSANDRA-17581 """
+        nodetool = os.path.join(node.get_install_dir(), 'bin', 'nodetool')
+        with open(nodetool, 'r+') as fd:
+            contents = fd.readlines()
+            contents.insert(len(contents)-5, "      -Dcom.sun.jndi.rmiURLParsing=legacy \\\n")
+            fd.seek(0)
+            fd.writelines(contents)
+
     def install_nodetool_legacy_parsing(self):
-        """ Hack nodetool on old versions for legacy URL parsing, ala CASSANDRA-17581 """
+        """ Install nodetool legacy parsing on the cluster """
         if self.cluster.version() < LooseVersion('3.11.13'):
-            logger.debug("hacking nodetool for legacy parsing")
-            nodetool = os.path.join(self.cluster.get_install_dir(), 'bin', 'nodetool')
-            with open(nodetool, 'r+') as fd:
-                contents = fd.readlines()
-                contents.insert(len(contents)-5, "      -Dcom.sun.jndi.rmiURLParsing=legacy \\\n")
-                fd.seek(0)
-                fd.writelines(contents)
+            logger.debug("hacking nodetool for legacy parsing on {}".format(self.cluster.version()))
+            for node in self.cluster.nodelist():
+                self.install_legacy_parsing(node)
         else:
             logger.debug("not modifying nodetool on version {}".format(self.cluster.version()))
 
