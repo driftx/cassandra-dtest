@@ -90,6 +90,7 @@ class TestSCUpgrade(Tester):
 
     def _upgrade_super_columns_through_versions_test(self, upgrade_path):
         cluster = self.prepare()
+        self.install_nodetool_legacy_parsing()
         node1 = cluster.nodelist()[0]
         node1.run_cqlsh(cmds="""CREATE KEYSPACE supcols WITH replication = {
                                     'class': 'SimpleStrategy',
