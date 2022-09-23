@@ -89,9 +89,14 @@ class DTestSetup(object):
         nodetool = os.path.join(node.get_install_dir(), 'bin', 'nodetool')
         with open(nodetool, 'r+') as fd:
             contents = fd.readlines()
-            contents.insert(len(contents)-5, "      -Dcom.sun.jndi.rmiURLParsing=legacy \\\n")
-            fd.seek(0)
-            fd.writelines(contents)
+            if "legacy" in contents[len(contents)-6]:
+                logger.debug("nodetool already hacked")
+            elif not contents[len(contents)-5].endswith('\\\n'):
+                logger.debug("version does not appear to need hacking")
+            else:
+                contents.insert(len(contents)-5, "      -Dcom.sun.jndi.rmiURLParsing=legacy \\\n")
+                fd.seek(0)
+                fd.writelines(contents)
 
     def install_nodetool_legacy_parsing(self):
         """ Install nodetool legacy parsing on the cluster """
