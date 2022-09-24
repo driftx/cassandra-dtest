@@ -216,9 +216,9 @@ class BaseSStableLoaderTester(Tester):
             logger.debug("Running sstableloader with version from %s" % (default_install_dir))
             # Return to previous version
             cluster.set_install_dir(install_dir=default_install_dir)
-            self.install_nodetool_legacy_parsing()
             self.fixture_dtest_setup.reinitialize_cluster_for_different_version()
 
+        self.install_nodetool_legacy_parsing()
         cluster.start(jvm_args=list(self.jvm_args))
         time.sleep(5)  # let gossip figure out what is going on
 
