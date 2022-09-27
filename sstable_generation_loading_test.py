@@ -178,6 +178,7 @@ class BaseSStableLoaderTester(Tester):
         self.install_nodetool_legacy_parsing()
         logger.debug("Using jvm_args={}".format(self.jvm_args))
         cluster.populate(2).start(jvm_args=list(self.jvm_args))
+        self.install_nodetool_legacy_parsing()
         node1, node2 = cluster.nodelist()
         time.sleep(.5)
 
