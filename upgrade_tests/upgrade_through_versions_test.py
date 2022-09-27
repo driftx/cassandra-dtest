@@ -514,6 +514,7 @@ class TestUpgrade(Tester):
         if not partial:
             nodes = self.cluster.nodelist()
 
+        self.install_nodetool_legacy_parsing()
         for node in nodes:
             logger.debug('Shutting down node: ' + node.name)
             node.drain()
