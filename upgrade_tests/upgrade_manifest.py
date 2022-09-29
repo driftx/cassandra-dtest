@@ -242,6 +242,7 @@ def build_upgrade_pairs():
                     logger.debug("{} appears applicable to current env. Overriding final test version from {} to {}".format(path_name, oldmeta.version, newmeta.version))
                     destination_meta = newmeta
 
+            logger.debug("adding pair {}, {}, {}, {}, {}".format(path_name, origin_meta.version, destination_meta.version, origin_meta, destination_meta))
             valid_upgrade_pairs.append(
                 UpgradePath(
                     name=path_name,
