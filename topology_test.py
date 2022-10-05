@@ -472,7 +472,7 @@ class TestTopology(Tester):
         @expected_errors ToolError when # nodes will drop below configured replicas in NTS/SimpleStrategy
         """
         cluster = self.cluster
-        cluster.populate([2, 2]).start()
+        cluster.populate([2, 2]).start(wait_for_binary_proto=True)
         node1, node2, node3, node4 = self.cluster.nodelist()
         session = self.patient_cql_connection(node2)
         session.execute("ALTER KEYSPACE system_distributed WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':'2'};")
