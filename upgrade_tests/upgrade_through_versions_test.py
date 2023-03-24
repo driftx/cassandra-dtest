@@ -20,11 +20,10 @@ from cassandra.query import SimpleStatement
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester
 from tools.misc import generate_ssl_stores, new_node
-from .upgrade_base import switch_jdks
 from .upgrade_manifest import (build_upgrade_pairs,
                                current_2_1_x, current_2_2_x, current_3_0_x,
                                indev_3_11_x,
-                               current_3_11_x, indev_trunk, CASSANDRA_4_0)
+                               current_3_11_x, indev_trunk, CASSANDRA_4_0, CASSANDRA_5_0)
 
 logger = logging.getLogger(__name__)
 
@@ -328,7 +327,6 @@ class TestUpgrade(Tester):
         cluster = self.cluster
         cluster.set_install_dir(version=self.test_version_metas[0].version)
         self.install_nodetool_legacy_parsing()
-        switch_jdks(self.test_version_metas[0].java_version)
         self.fixture_dtest_setup.reinitialize_cluster_for_different_version()
         logger.debug("Versions to test (%s): %s" % (type(self), str([v.version for v in self.test_version_metas])))
 
@@ -434,7 +432,6 @@ class TestUpgrade(Tester):
                     self._check_on_subprocs(self.fixture_dtest_setup.subprocs)
                     logger.debug('Successfully upgraded %d of %d nodes to %s' %
                           (num + 1, len(self.cluster.nodelist()), version_meta.version))
-
                 self.cluster.set_install_dir(version=version_meta.version)
                 self.install_nodetool_legacy_parsing()
                 self.fixture_dtest_setup.reinitialize_cluster_for_different_version()
@@ -509,7 +506,6 @@ class TestUpgrade(Tester):
         and upgrade all nodes.
         """
         logger.debug('Upgrading {nodes} to {version}'.format(nodes=[n.name for n in nodes] if nodes is not None else 'all nodes', version=version_meta.version))
-        switch_jdks(version_meta.java_version)
         logger.debug("JAVA_HOME: " + os.environ.get('JAVA_HOME'))
         if not partial:
             nodes = self.cluster.nodelist()
@@ -527,6 +523,8 @@ class TestUpgrade(Tester):
             logger.debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
             if internode_ssl and (LooseVersion(version_meta.family) >= CASSANDRA_4_0):
                 node.set_configuration_options({'server_encryption_options': {'enabled': True, 'enable_legacy_ssl_storage_port': True}})
+            if LooseVersion(version_meta.family) >= CASSANDRA_5_0:
+                node.set_configuration_options({'enable_scripted_user_defined_functions': 'false'})
 
         # hacky? yes. We could probably extend ccm to allow this publicly.
         # the topology file needs to be written before any nodes are started
@@ -776,6 +774,10 @@ class BootstrapMixin(object):
         # Check we can bootstrap a new node on the upgraded cluster:
         logger.debug("Adding a node to the cluster")
         nnode = new_node(self.cluster, remote_debug_port=str(2000 + len(self.cluster.nodes)))
+
+        if nnode.get_cassandra_version() >= '4.2':
+            nnode.set_configuration_options({'enable_scripted_user_defined_functions': 'false'})
+
         nnode.start(use_jna=True, wait_other_notice=240, wait_for_binary_proto=True)
         self._write_values()
         self._increment_counters()
@@ -786,6 +788,9 @@ class BootstrapMixin(object):
         # Check we can bootstrap a new node on the upgraded cluster:
         logger.debug("Adding a node to the cluster")
         nnode = new_node(self.cluster, remote_debug_port=str(2000 + len(self.cluster.nodes)), data_center='dc2')
+
+        if nnode.get_cassandra_version() >= '4.2':
+            nnode.set_configuration_options({'enable_scripted_user_defined_functions': 'false'})
 
         nnode.start(use_jna=True, wait_other_notice=240, wait_for_binary_proto=True)
         self._write_values()

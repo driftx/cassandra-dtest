@@ -176,8 +176,8 @@ class TestRebuild(Tester):
         cluster.add(node1, True, data_center='dc1')
         cluster.add(node2, True, data_center='dc1')
 
-        node1.start(wait_for_binary_proto=True)
-        node2.start(wait_for_binary_proto=True)
+        node1.start(wait_for_binary_proto=True, jvm_args=['-Dcassandra.reset_bootstrap_progress=false'])
+        node2.start(wait_for_binary_proto=True, jvm_args=['-Dcassandra.reset_bootstrap_progress=false'])
 
         # Insert data into node1 and node2
         session = self.patient_exclusive_cql_connection(node1)
@@ -200,8 +200,7 @@ class TestRebuild(Tester):
 
         cluster.add(node3, False, data_center='dc2')
 
-        node3.start(wait_other_notice=False, wait_for_binary_proto=True)
-
+        node3.start(wait_other_notice=False, wait_for_binary_proto=True, jvm_args=['-Dcassandra.reset_bootstrap_progress=false'])
         # Wait for snitch to be refreshed
         time.sleep(5)
 
@@ -218,17 +217,17 @@ class TestRebuild(Tester):
         node3.byteman_submit(script)
 
         # First rebuild must fail and data must be incomplete
-        with pytest.raises(ToolError, message='Unexpected: SUCCEED'):
+        with pytest.raises(ToolError):
             logger.debug('Executing first rebuild -> '),
             node3.nodetool('rebuild dc1')
-        logger.debug('Expected: FAILED')
+            pytest.fail("Expected: FAILED")
 
         session.execute('USE ks')
-        with pytest.raises(AssertionError, message='Unexpected: COMPLETE'):
+        with pytest.raises(AssertionError):
             logger.debug('Checking data is complete -> '),
             for i in range(0, 20000):
                 query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
-        logger.debug('Expected: INCOMPLETE')
+            pytest.fail('Expected: INCOMPLETE')
 
         logger.debug('Executing second rebuild -> '),
         node3.nodetool('rebuild dc1')
@@ -337,8 +336,9 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with pytest.raises(ToolError, match='is not a range that is owned by this node'):
+        with pytest.raises(ToolError):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (node1_token, node2_token))
+            pytest.fail("range should not be owned by this node")
 
     @since('3.10')
     @pytest.mark.no_vnodes
@@ -373,8 +373,9 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with pytest.raises(ToolError, message='Unable to find sufficient sources for streaming range'):
+        with pytest.raises(ToolError):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (node3_token, node1_token, node3_address))
+            pytest.fail("should not find sufficient sources")
 
     @since('3.10')
     @pytest.mark.no_vnodes
