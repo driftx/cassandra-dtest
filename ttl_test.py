@@ -614,9 +614,11 @@ class TestRecoverNegativeExpirationDate(TestHelper):
         self.cluster.stop()
 
         logger.debug("Will run offline scrub on sstable")
+
+        env = node.get_env()
         scrubbed_sstables = self.launch_standalone_scrub('ks', 'ttl_table',
                                                          reinsert_overflowed_ttl=True,
-                                                         no_validate=True)
+                                                         no_validate=True, env=env)
 
         logger.debug("Executed offline scrub on {}".format(str(scrubbed_sstables)))
 

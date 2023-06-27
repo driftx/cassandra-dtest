@@ -110,12 +110,13 @@ class TestHelper(Tester):
         if not common.is_win():  # nodetool always prints out on windows
             assert_length_equal(response, 0)  # nodetool does not print anything unless there is an error
 
-    def launch_standalone_scrub(self, ks, cf, reinsert_overflowed_ttl=False, no_validate=False):
+    def launch_standalone_scrub(self, ks, cf, reinsert_overflowed_ttl=False, no_validate=False, env=None):
         """
         Launch the standalone scrub
         """
         node1 = self.cluster.nodelist()[0]
-        env = common.make_cassandra_env(node1.get_install_cassandra_root(), node1.get_node_cassandra_root())
+        if env is None:
+            env = common.make_cassandra_env(node1.get_install_cassandra_root(), node1.get_node_cassandra_root())
         scrub_bin = node1.get_tool('sstablescrub')
         logger.debug(scrub_bin)
 
