@@ -161,6 +161,63 @@ class TestGossipingPropertyFileSnitch(Tester):
         query.consistency_level = ConsistencyLevel.ALL;
         session.execute(query)
 
+    def test_cross_dc_streaming_with_preferred(self):
+        """
+        Check that streaming does not use the preferred_ip cross-dc
+        """
+        NODE1_LISTEN_ADDRESS = '127.0.0.1'
+        NODE1_BROADCAST_ADDRESS = '127.0.0.3'
+
+        NODE2_LISTEN_ADDRESS = '127.0.0.2'
+        NODE2_BROADCAST_ADDRESS = '127.0.0.4'
+
+        cluster = self.cluster
+        cluster.populate(2)
+        node1, node2 = cluster.nodelist()
+
+        cluster.seeds = [NODE1_BROADCAST_ADDRESS]
+        cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.GossipingPropertyFileSnitch',
+                                                  'listen_on_broadcast_address': 'true'})
+        node1.set_configuration_options(values={'broadcast_address': NODE1_BROADCAST_ADDRESS})
+        node2.set_configuration_options(values={'broadcast_address': NODE2_BROADCAST_ADDRESS})
+
+        # put nodes in different DCs
+        with open(os.path.join(node1.get_conf_dir(), 'cassandra-rackdc.properties'), 'w') as snitch_file:
+            snitch_file.write("dc=dc1" + os.linesep)
+            snitch_file.write("rack=rack1" + os.linesep)
+            snitch_file.write("prefer_local=true" + os.linesep)
+
+        with open(os.path.join(node2.get_conf_dir(), 'cassandra-rackdc.properties'), 'w') as snitch_file:
+            snitch_file.write("dc=dc2" + os.linesep)
+            snitch_file.write("rack=rack1" + os.linesep)
+            snitch_file.write("prefer_local=true" + os.linesep)
+
+
+        node1.start(wait_for_binary_proto=True)
+        node1.mark_log()
+        node2.start(wait_for_binary_proto=True, wait_other_notice=False) # so second dc is known
+        node1.watch_log_for('127.0.0.4:7000 is now UP')
+        session = self.patient_exclusive_cql_connection(node1)
+        session.execute("CREATE KEYSPACE testpreferred WITH replication = {'class': 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 1}")
+        session.execute("CREATE TABLE testpreferred.tbl1 (key int PRIMARY KEY) WITH speculative_retry = 'NONE'")
+        node2.stop()
+        node1.watch_log_for('127.0.0.4:7000 is now DOWN')
+        insert_stmt = session.prepare("INSERT INTO testpreferred.tbl1 (key) VALUES (?)")
+        insert_stmt.consistency_level = ConsistencyLevel.ONE
+        for x in range(100):
+            session.execute(insert_stmt, [x])
+        node1.flush()
+        node1.mark_log()
+        node2.start(wait_for_binary_proto=True, wait_other_notice=False)
+        node1.watch_log_for('127.0.0.4:7000 is now UP')
+        node2.nodetool('rebuild dc1')
+        with JolokiaAgent(node2) as jmx:
+            mbean = make_mbean('metrics', type='Streaming', scope='/127.0.0.3.7000', name='IncomingBytes')
+            count = jmx.read_attribute(mbean, 'Count')
+            assert count > 0
+
+
+
 class TestDynamicEndpointSnitch(Tester):
     @pytest.mark.resource_intensive
     @since('3.10')
