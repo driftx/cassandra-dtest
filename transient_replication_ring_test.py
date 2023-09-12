@@ -1,5 +1,6 @@
 import logging
 import types
+import time
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
@@ -267,6 +268,7 @@ class TestTransientReplicationRing(Tester):
         self.check_replication(sessions, exactly=2)
 
         nodes[0].move(move_token)
+        time.sleep(1)
         cleanup_nodes(nodes)
 
         self.check_replication(sessions, gte=2, lte=3)
