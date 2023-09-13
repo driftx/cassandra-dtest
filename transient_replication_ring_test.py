@@ -254,7 +254,7 @@ class TestTransientReplicationRing(Tester):
             print("Inserting " + str(i))
             self.insert_row(i, i, i, main_session)
 
-        nodes[1].start(wait_for_binary_proto=True)
+        nodes[1].start(wait_for_binary_proto=NODE_WAIT_TIMEOUT_IN_SECS * 2)
         sessions = [self.exclusive_cql_connection(node) for node in [self.node1, self.node2, self.node3, node4]]
 
         expected = [gen_expected(range(0, 11), range(31, 40)),
