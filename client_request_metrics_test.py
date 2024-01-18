@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import partial
 from itertools import repeat
+from distutils.version import LooseVersion
 import pytest
 import time
 
@@ -45,13 +46,16 @@ class TestClientRequestMetrics(Tester):
             f"Scanned over {TOMBSTONE_FAILURE_THRESHOLD + 1} tombstones during query"  # Caused by the read failure tests
         )
 
-    def setup_once(self):
+    def do_setup(self, paxos_variant=1):
         cluster = self.cluster
-        cluster.set_configuration_options({'read_request_timeout_in_ms': 3000,
+        configuration_options = {'read_request_timeout_in_ms': 3000,
                                            'write_request_timeout_in_ms': 3000,
                                            'phi_convict_threshold': 12,
                                            'tombstone_failure_threshold': TOMBSTONE_FAILURE_THRESHOLD,
-                                           'enable_materialized_views': 'true'})
+                                           'enable_materialized_views': 'true'}
+        if cluster.version() >= LooseVersion('4.1'):
+            configuration_options['paxos_variant'] = 'v{}'.format(paxos_variant)
+        cluster.set_configuration_options(configuration_options)
         cluster.populate(2, debug=True)
         cluster.start(jvm_args=JVM_ARGS)
         node1 = cluster.nodelist()[0]
@@ -80,7 +84,7 @@ class TestClientRequestMetrics(Tester):
     def test_client_request_metrics(self):
         # this is written as a single test method in order to reuse the same cluster for all tests
         # setup_once configures and starts the cluster with all schema and preconditions required by all tests.
-        self.setup_once()
+        self.do_setup()
 
         self.write_nominal()
         self.read_nominal()
@@ -107,6 +111,40 @@ class TestClientRequestMetrics(Tester):
 
         self.cas_write()
         self.cas_write_contention()
+        self.cas_write_unavailables()
+        self.cas_write_timeouts()
+        self.cas_write_condition_not_met()
+
+    @since('4.1')
+    def test_client_request_metrics_paxosv2(self):
+        self.do_setup(paxos_variant=2)
+
+        self.write_nominal()
+        self.read_nominal()
+
+        self.write_failures()
+        self.write_unavailables()
+        self.write_timeouts()
+
+        self.read_failures()
+        self.read_unavailables()
+        self.read_timeouts()
+
+        self.range_slice_failures()
+        self.range_slice_unavailables()
+        self.range_slice_timeouts()
+
+        self.view_writes()
+
+        self.cas_read()
+        #self.cas_read_contention() v2 does not reliably cause contention
+        self.cas_read_failures()
+        self.cas_read_unavailables()
+        self.cas_read_timeouts()
+
+        self.cas_write()
+        # self.cas_write_contention() v2 does not cause contention
+
         self.cas_write_unavailables()
         self.cas_write_timeouts()
         self.cas_write_condition_not_met()
