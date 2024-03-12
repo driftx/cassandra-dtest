@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def fixture_dtest_setup_overrides(request, dtest_config):
     dtest_setup_overrides = DTestSetupOverrides()
     if request.node.name == "test_change_durable_writes":
-        dtest_setup_overrides.cluster_options = ImmutableMapping({'commitlog_segment_size_in_mb': 1})
+        dtest_setup_overrides.cluster_options = ImmutableMapping({'commitlog_segment_size_in_mb': 2})
     return dtest_setup_overrides
 
 
@@ -174,7 +174,7 @@ def write_to_trigger_fsync(session, ks, table):
     """
     Given a session, a keyspace name, and a table name, inserts enough values
     to trigger an fsync to the commitlog, assuming the cluster's
-    commitlog_segment_size_in_mb is 1. Assumes the table's columns are
+    commitlog_segment_size_in_mb is 2. Assumes the table's columns are
     (key int, a int, b int, c int).
     """
     """
@@ -186,8 +186,8 @@ def write_to_trigger_fsync(session, ks, table):
     execute_concurrent_with_args(session,
                                  session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
                                                  'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
-                                 ((x, x + 1, x + 2, x + 3)
-                                 for x in range(50000)), concurrency=5)
+                                 ((x, x + int(1*1e7), x + int(2*1e7), x + int(3*1e7))
+                                 for x in range(100000)), concurrency=5)
 
 
 def commitlog_size(node):
