@@ -93,6 +93,7 @@ class TestConfiguration(Tester):
         durable_session.execute('CREATE TABLE ks.tab (key int PRIMARY KEY, a int, b int, c int)')
         logger.debug('commitlog size diff = ' + str(commitlog_size(durable_node) - durable_init_size))
         write_to_trigger_fsync(durable_session, 'ks', 'tab')
+        logger.debug('commitlog size diff = ' + str(commitlog_size(durable_node) - durable_init_size))
 
         assert commitlog_size(durable_node) > durable_init_size, \
             "This test will not work in this environment; write_to_trigger_fsync does not trigger fsync."
@@ -204,4 +205,5 @@ def commitlog_size(node):
                 total += entry.stat().st_size
             elif entry.is_dir():
                 total += get_dir_size(entry.path)
+            logger.debug("added {}, {}".format(entry, entry.stat()))
     return total
