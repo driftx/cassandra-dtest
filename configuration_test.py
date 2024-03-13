@@ -15,14 +15,6 @@ from distutils.version import LooseVersion
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture()
-def fixture_dtest_setup_overrides(request, dtest_config):
-    dtest_setup_overrides = DTestSetupOverrides()
-    if request.node.name == "test_change_durable_writes":
-        dtest_setup_overrides.cluster_options = ImmutableMapping({'commitlog_segment_size_in_mb': 2})
-    return dtest_setup_overrides
-
-
 class TestConfiguration(Tester):
 
     def test_compression_chunk_length(self):
@@ -74,16 +66,13 @@ class TestConfiguration(Tester):
         - writing a dataset to this keyspace that is known to trigger a commitlog fsync,
         - asserting that the commitlog has grown in size since the data was written.
         """
-        def new_commitlog_cluster_node():
-            # writes should block on commitlog fsync
-            self.fixture_dtest_setup.cluster.populate(1)
-            node = self.fixture_dtest_setup.cluster.nodelist()[0]
-            self.fixture_dtest_setup.cluster.set_batch_commitlog(enabled=True, use_batch_window = self.fixture_dtest_setup.cluster.version() < '5.0')
+        cluster = self.cluster
+        cluster.set_batch_commitlog(enabled=True, use_batch_window = cluster.version() < '5.0')
+        cluster.set_configuration_options(values={'commitlog_segment_size_in_mb': 2})
 
-            self.fixture_dtest_setup.cluster.start()
-            return node
+        cluster.populate(1).start()
+        durable_node = cluster.nodelist()[0]
 
-        durable_node = new_commitlog_cluster_node()
         durable_init_size = commitlog_size(durable_node)
         durable_session = self.patient_exclusive_cql_connection(durable_node)
 
@@ -98,11 +87,12 @@ class TestConfiguration(Tester):
         assert commitlog_size(durable_node) > durable_init_size, \
             "This test will not work in this environment; write_to_trigger_fsync does not trigger fsync."
 
-        # get a fresh cluster to work on
         durable_session.shutdown()
-        self.fixture_dtest_setup.cleanup_and_replace_cluster()
+        cluster.shutdown()
+        cluster.clear()
 
-        node = new_commitlog_cluster_node()
+        cluster.start()
+        node = cluster.nodelist()[0]
         init_size = commitlog_size(node)
         session = self.patient_exclusive_cql_connection(node)
 
