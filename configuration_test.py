@@ -190,7 +190,18 @@ def write_to_trigger_fsync(session, ks, table):
                                  for x in range(100000)), concurrency=5)
 
 
-def commitlog_size(node):
+def commitlog_size_jmx(node):
     commitlog_size_mbean = make_mbean('metrics', type='CommitLog', name='TotalCommitLogSize')
     with JolokiaAgent(node) as jmx:
         return jmx.read_attribute(commitlog_size_mbean, 'Value')
+
+def commitlog_size(node):
+    total = 0
+    path = os.path.join(node.get_path(), 'commitlogs')
+    with os.scandir(path) as it:
+        for entry in it:
+            if entry.is_file():
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                total += get_dir_size(entry.path)
+    return total
