@@ -173,6 +173,9 @@ class TestTopology(Tester):
         # This sleep is here to give the cluster time to hit the AssertionError
         # described in 9912. Do not remove it.
         time.sleep(10)
+        out = node1.nodetool('describecluster').stdout
+        assert 'UNREACHABLE' not in out
+
 
     @pytest.mark.skip(reason='Hangs on CI for 2.1')
     def test_concurrent_decommission_not_allowed(self):
