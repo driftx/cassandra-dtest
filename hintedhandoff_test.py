@@ -334,3 +334,53 @@ class TestHintedHandoff(Tester):
 
         if exception is not None:
             raise exception
+
+    @since('4.1')
+    def test_hintedhandoff_window_after_expired(self):
+
+        def wait_for_downtime(node_to_query, node, downtime):
+            def endpoint_downtime(node_to_query, node):
+                mbean = make_mbean('net', type='Gossiper')
+                with JolokiaAgent(node_to_query) as jmx:
+                    return jmx.execute_method(mbean, 'getEndpointDowntime(java.lang.String)', [node])
+
+            run = True
+            while run:
+                try:
+                    if downtime == 0:
+                        while endpoint_downtime(node_to_query, node) != downtime:
+                            time.sleep(1)
+                    else:
+                        while endpoint_downtime(node_to_query, node) <= downtime:
+                            time.sleep(1)
+                    run = False
+                except Exception:
+                    pass
+
+        # hint_window_persistent_enabled is set to true by default
+        self.cluster.set_configuration_options({'max_hint_window_in_ms': 10000,
+                                                'hinted_handoff_enabled': True,
+                                                'max_hints_delivery_threads': 1,
+                                                'hints_flush_period_in_ms': 100, })
+        self.cluster.populate(2).start()
+        node1, node2 = self.cluster.nodelist()
+        session = self.patient_cql_connection(node1)
+        create_ks(session, 'ks', 2)
+        create_c1c2_table(self, session)
+
+        node2.stop()
+        wait_for_downtime(node1, "127.0.0.2", 1000)
+        insert_c1c2(session, n=(100, 200), consistency=ConsistencyLevel.ONE)
+        node2.start()
+        node1.watch_log_for('Finished hinted handoff') # no hints left
+        time.sleep(10) # go past window
+        node2.stop()
+        insert_c1c2(session, n=(200, 300), consistency=ConsistencyLevel.ONE)
+        node2.start()
+        node1.watch_log_for('Finished hinted handoff')
+        session = self.patient_exclusive_cql_connection(node2)
+        session.execute('USE ks')
+        for x in range(200, 300):
+            query_c1c2(session, x, ConsistencyLevel.ONE)
+
+
