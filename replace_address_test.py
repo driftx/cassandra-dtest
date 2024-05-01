@@ -297,13 +297,17 @@ class TestReplaceAddress(BaseReplaceAddressTest):
     def test_replace_first_boot(self):
         self._test_replace_node(jvm_option='replace_address_first_boot')
 
-    def _test_replace_node(self, gently=False, jvm_option='replace_address', same_address=False):
+    @pytest.mark.resource_intensive
+    def test_replace_stopped_node_same_address_compression(self):
+        self._test_replace_node(gently=True, same_address=True, opts={'internode_compression': 'all'})
+
+    def _test_replace_node(self, gently=False, jvm_option='replace_address', opts=None, same_address=False):
         """
         Check that the replace address function correctly replaces a node that has failed in a cluster.
         Create a cluster, cause a node to fail, and bring up a new node with the replace_address parameter.
         Check that tokens are migrated and that data is replicated properly.
         """
-        self._setup(n=3)
+        self._setup(n=3, opts=opts)
         self._insert_data()
         initial_data = self._fetch_initial_data()
         self._stop_node_to_replace(gently=gently)
