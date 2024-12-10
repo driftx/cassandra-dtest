@@ -4,12 +4,19 @@ from cassandra import AuthenticationFailed, Unauthorized
 from cassandra.cluster import NoHostAvailable
 
 from dtest import Tester
+from dtest_setup_overrides import DTestSetupOverrides
+
 
 since = pytest.mark.since
 
 @since('2.2')
 class TestAuth(Tester):
 
+    @pytest.fixture(scope='function', autouse=True)
+    def fixture_dtest_setup_overrides(self, dtest_config):
+        dtest_setup_overrides = DTestSetupOverrides()
+        if dtest_config.cassandra_version_from_build >= '5.0':
+            dtest_setup_overrides.cluster_options = {'storage_compatibility_mode': 'NONE'}
 
     def test_login_existing_node(self):
         """

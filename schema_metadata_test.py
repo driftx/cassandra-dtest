@@ -508,7 +508,7 @@ class TestSchemaMetadata(Tester):
         cluster.schema_event_refresh_window = 0
 
         if cluster.version() >= '4.2':
-            cluster.set_configuration_options({'enable_user_defined_functions': 'true'})
+            cluster.set_configuration_options({'enable_user_defined_functions': 'true', 'storage_compatibility_mode': 'NONE'})
         elif cluster.version() >= '3.0':
             cluster.set_configuration_options({'enable_user_defined_functions': 'true',
                                                'enable_scripted_user_defined_functions': 'true'})

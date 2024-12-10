@@ -527,6 +527,8 @@ class TestUserTypes(Tester):
         config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator',
                   'authorizer': 'org.apache.cassandra.auth.CassandraAuthorizer',
                   'permissions_validity_in_ms': 0}
+        if cluster.version() >= '5.0':
+            config['storage_compatibility_mode'] = 'NONE'
         cluster.set_configuration_options(values=config)
         cluster.populate(3).start()
         node1, node2, node3 = cluster.nodelist()
