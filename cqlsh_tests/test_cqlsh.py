@@ -109,7 +109,7 @@ class TestCqlsh(Tester, CqlshMixin):
             dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
                                                                       'enable_scripted_user_defined_functions': 'true'})
         else:
-            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true', 'storage_compatibility_mode': 'NONE'})
         return dtest_setup_overrides
 
     @classmethod
