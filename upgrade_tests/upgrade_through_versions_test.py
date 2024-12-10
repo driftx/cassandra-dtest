@@ -416,7 +416,8 @@ class TestUpgrade(Tester):
         cluster = self.cluster
         if cluster.version() >= '5.0':
             cluster.set_configuration_options({'user_defined_functions_threads_enabled': 'true',
-                                               'scripted_user_defined_functions_enabled': 'false'})
+                                               'scripted_user_defined_functions_enabled': 'false',
+                                               'storage_compatibility_mode': 'NONE'})
         elif cluster.version() >= '3.0':
             cluster.set_configuration_options({'enable_user_defined_functions': 'true',
                                                'enable_scripted_user_defined_functions': 'true'})

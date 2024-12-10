@@ -99,6 +99,9 @@ class TestJMXAuth(Tester):
         config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator',
                   'authorizer': 'org.apache.cassandra.auth.CassandraAuthorizer',
                   'permissions_validity_in_ms': permissions_validity}
+        if self.cluster.version() >= LooseVersion('5.0'):
+            config['storage_compatibility_mode'] = 'NONE'
+
         self.cluster.set_configuration_options(values=config)
         self.cluster.populate(nodes)
         [node] = self.cluster.nodelist()

@@ -2822,6 +2822,8 @@ class TestCqlLogin(Tester, CqlshMixin):
     def fixture_cluster_setup(self, fixture_dtest_setup):
         cluster = fixture_dtest_setup.cluster
         config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator'}
+        if cluster.version() >= '5.0':
+            config['storage_compatibility_mode'] = 'NONE'
         cluster.set_configuration_options(values=config)
         cluster.populate(1).start()
         [self.node1] = cluster.nodelist()

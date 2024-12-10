@@ -72,6 +72,7 @@ class TestAuth(AbstractTestAuth):
             r'Can\'t send migration request: node.*is down',
         )
 
+
     def test_system_auth_ks_is_alterable(self):
         """
         * Launch a three node cluster
@@ -1131,6 +1132,8 @@ class TestAuth(AbstractTestAuth):
             config['enable_materialized_views'] = 'true'
         if self.dtest_config.cassandra_version_from_build >= '4.0':
             config['network_authorizer'] = 'org.apache.cassandra.auth.CassandraNetworkAuthorizer'
+        if self.dtest_config.cassandra_version_from_build >= '5.0':
+            config['storage_compatibility_mode'] = 'NONE'
         self.cluster.set_configuration_options(values=config)
         self.cluster.populate(nodes).start()
 
@@ -1203,7 +1206,7 @@ class TestAuthRoles(AbstractTestAuth):
             dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
                                                                       'enable_scripted_user_defined_functions': 'true'})
         else:
-            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true', 'storage_compatibility_mode': 'NONE'})
 
         if dtest_config.cassandra_version_from_build >= '4.0':
             self.Role = namedtuple('Role', ['name', 'superuser', 'login', 'options', 'dcs'])
@@ -3118,13 +3121,15 @@ class TestNetworkAuth(AbstractTestAuth):
 
     @pytest.fixture(autouse=True)
     def fixture_setup_auth(self, fixture_dtest_setup):
-        fixture_dtest_setup.cluster.set_configuration_options(values={
+        config = {
             'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator',
             'authorizer': 'org.apache.cassandra.auth.CassandraAuthorizer',
             'role_manager': 'org.apache.cassandra.auth.CassandraRoleManager',
             'network_authorizer': 'org.apache.cassandra.auth.CassandraNetworkAuthorizer',
-            'num_tokens': 1
-        })
+            'num_tokens': 1}
+        if fixture_dtest_setup.cluster.version() >= '5.0':
+            config['storage_compatibility_mode'] = 'NONE'
+        fixture_dtest_setup.cluster.set_configuration_options(values=config)
         fixture_dtest_setup.cluster.populate([1, 1], debug=True).start(jvm_args=['-XX:-PerfDisableSharedMem'])
         fixture_dtest_setup.dc1_node, fixture_dtest_setup.dc2_node = fixture_dtest_setup.cluster.nodelist()
         fixture_dtest_setup.superuser = fixture_dtest_setup.patient_exclusive_cql_connection(fixture_dtest_setup.dc1_node, user='cassandra', password='cassandra')

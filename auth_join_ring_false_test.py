@@ -5,6 +5,7 @@ from cassandra.cluster import NoHostAvailable
 
 from dtest import Tester
 
+
 since = pytest.mark.since
 
 @since('2.2')
@@ -207,6 +208,8 @@ class TestAuth(Tester):
                   'role_manager': 'org.apache.cassandra.auth.CassandraRoleManager',
                   'permissions_validity_in_ms': 0,
                   'roles_validity_in_ms': roles_expiry}
+        if self.cluster.version() >= '5.0':
+            config['storage_compatibility_mode'] = 'NONE'
         self.cluster.set_configuration_options(values=config)
         self.cluster.populate(nodes).start()
 
