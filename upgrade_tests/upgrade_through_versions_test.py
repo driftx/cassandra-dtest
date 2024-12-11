@@ -419,8 +419,7 @@ class TestUpgrade(Tester):
                                                'scripted_user_defined_functions_enabled': 'false',
                                                'storage_compatibility_mode': 'NONE'})
         elif cluster.version() >= '3.0':
-            cluster.set_configuration_options({'enable_user_defined_functions': 'true',
-                                               'enable_scripted_user_defined_functions': 'true'})
+            cluster.set_configuration_options({'enable_user_defined_functions': 'true'})
         elif cluster.version() >= '2.2':
             cluster.set_configuration_options({'enable_user_defined_functions': 'true'})
 
@@ -855,8 +854,7 @@ class BootstrapMixin(object):
             cluster.set_configuration_options({'user_defined_functions_threads_enabled': 'true',
                                                'scripted_user_defined_functions_enabled': 'false'})
         elif cluster.version() >= '3.0':
-            cluster.set_configuration_options({'enable_user_defined_functions': 'true',
-                                               'enable_scripted_user_defined_functions': 'true'})
+            cluster.set_configuration_options({'enable_user_defined_functions': 'true'})
         elif cluster.version() >= '2.2':
             cluster.set_configuration_options({'enable_user_defined_functions': 'true'})
 

@@ -1206,8 +1206,7 @@ class TestAuthRoles(AbstractTestAuth):
         """
         dtest_setup_overrides = DTestSetupOverrides()
         if '3.0' <= dtest_config.cassandra_version_from_build < '4.2':
-            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
-                                                                      'enable_scripted_user_defined_functions': 'true'})
+            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
         else:
             dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true', 'storage_compatibility_mode': 'NONE'})
 
