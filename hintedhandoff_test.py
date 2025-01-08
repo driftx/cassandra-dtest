@@ -2,6 +2,7 @@ import os
 import time
 import pytest
 import logging
+import re
 
 from cassandra import ConsistencyLevel
 
@@ -203,6 +204,61 @@ class TestHintedHandoff(Tester):
         time.sleep(5)
         for x in range(0, 100):
             query_c1c2(session, x, ConsistencyLevel.ONE)
+
+    """
+    Test that hints will be transferred during a schema disagreement
+    @jira_ticket CASSANDRA-20188 
+    """
+    def test_hintedhandoff_disagreement(self):
+        def hint_size(node):
+            total_size = 0
+            datadir = node.data_directories()[0]
+            hints = datadir + '/../hints'
+            assert os.path.isdir(hints)
+            for dirpath, dirnames, filenames in os.walk(hints):
+                for f in filenames:
+                    fp = os.path.join(dirpath, f)
+                    if os.path.isfile(fp):
+                        total_size += os.path.getsize(fp)
+            return total_size
+
+        def wait_no_hints(node, secs=30):
+            i=0
+            while(hint_size(node) > 0):
+                i += 1
+                if i >= secs:
+                    raise Exception("hints directory not empty in {} seconds".format(secs))
+                time.sleep(1)
+
+        # we will force a flush later, but need defense in depth against circle weirdness
+        self.cluster.set_configuration_options({'hints_flush_period_in_ms': 100})
+        self.cluster.populate(2).start()
+        [node1, node2] = self.cluster.nodelist()
+        session = self.patient_exclusive_cql_connection(node1)
+        create_ks(session, 'ks', 2)
+        create_c1c2_table(self, session)
+        node2.stop(wait_other_notice=True)
+
+        # sometimes the driver's control connection dies here, this one is sacrificial
+        session2 = self.patient_exclusive_cql_connection(node1)
+        session2.execute("USE ks")
+        try:
+            session2.execute("ALTER TABLE ks.cf with comment = 'disagree now'")
+        except Exception as e:
+            logger.info("Received {} while trying to alter table, continuing".format(e))
+        
+        insert_c1c2(session, n=1000, consistency=ConsistencyLevel.ONE)
+        node1.flush()
+        assert hint_size(node1) > 0
+        # make the disagreement unsolvable
+        node2.start(jvm_args=["-Dcassandra.IGNORED_SCHEMA_CHECK_ENDPOINTS={}".format("127.0.0.1")])
+
+        response = node2.nodetool('describecluster').stdout
+        schemas = response.split('Schema versions:')[1].strip()
+        num_schemas = len(re.findall(r'\[.*?\]', schemas))
+        assert num_schemas > 1
+
+        wait_no_hints(node1)
 
     @since('4.1')
     def test_hintedhandoff_window(self):
