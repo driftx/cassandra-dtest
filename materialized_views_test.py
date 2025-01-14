@@ -258,6 +258,35 @@ class TestMaterializedViews(Tester):
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
         assert len(result) == 1, "Expecting 1 materialized view == got" + str(result)
 
+    def test_guardrail(self):
+        cluster = self.cluster
+        cluster.set_configuration_options({'enable_materialized_views': 'true', 'materialized_views_per_table_fail_threshold': 1})
+        cluster.populate(1)
+        cluster.start()
+        node1 = cluster.nodelist()[0]
+
+        session = self.patient_cql_connection(node1)
+        create_ks(session, 'ks', 1)
+
+        session.execute(
+            ("CREATE TABLE users (username varchar, password varchar, gender varchar, "
+             "session_token varchar, state varchar, birth_year bigint, "
+             "PRIMARY KEY (username));")
+        )
+        session.execute(("CREATE MATERIALIZED VIEW users_by_state AS "
+                         "SELECT * FROM users WHERE STATE IS NOT NULL AND username IS NOT NULL "
+                         "PRIMARY KEY (state, username)"))
+        session.execute(("CREATE MATERIALIZED VIEW users_by_state2 AS "
+                         "SELECT * FROM users WHERE STATE IS NOT NULL AND username IS NOT NULL "
+                         "PRIMARY KEY (state, username)"))
+        session.execute(("CREATE MATERIALIZED VIEW users_by_state3 AS "
+                         "SELECT * FROM users WHERE STATE IS NOT NULL AND username IS NOT NULL "
+                         "PRIMARY KEY (state, username)"))
+        session.execute(("CREATE MATERIALIZED VIEW users_by_state4 AS "
+                         "SELECT * FROM users WHERE STATE IS NOT NULL AND username IS NOT NULL "
+                         "PRIMARY KEY (state, username)"))
+
+
     def test_gcgs_validation(self):
         """Verify that it's not possible to create or set a too low gc_grace_seconds on MVs"""
         session = self.prepare(user_table=True)
