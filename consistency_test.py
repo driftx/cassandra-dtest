@@ -768,6 +768,42 @@ class TestAccuracy(TestHelper):
 
 class TestConsistency(Tester):
 
+    def test_15159(self):
+        """
+        @jira_ticket CASSANDRA-15159
+        """
+        cluster = self.cluster
+
+        cluster.set_configuration_options(values={'hinted_handoff_enabled': False,
+                                                  'autocompaction_on_startup_enabled': False})
+
+        cluster.populate(3).start()
+        node1, node2, node3 = cluster.nodelist()
+
+        session = self.patient_cql_connection(node1)
+
+        query = "CREATE KEYSPACE IF NOT EXISTS test WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 3 }"
+        session.execute(query)
+
+        query = "CREATE TABLE test.table1 (key text, col text, val text,PRIMARY KEY ((key), col))"
+        session.execute(query)
+
+        query = "INSERT INTO test.table1  (key, col, val) VALUES ('key2', 'abc','xyz')"
+        session.execute(query, [], ConsistencyLevel.ALL);
+
+        cluster.flush()
+        node3.stop()
+
+        query = "INSERT INTO test.table1  (key, col, val) VALUES ('key2', 'abc','xyz') USING TTL 5"
+        session.execute(query, [], ConsistencyLevel.LOCAL_QUORUM);
+
+        cluster.flush()
+        time.sleep(10)
+
+        assert_all(session,
+                   "select * from test.table1 where key = 'key2'",
+                   [], cl=ConsistencyLevel.LOCAL_QUORUM)
+
     @since('4.0')
     def test_18766_sr(self):
         """
